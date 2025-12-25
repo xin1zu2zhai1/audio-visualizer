@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>Audio Analyzer & Spectrogram</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>Audio Analyzer (Analysis-oriented)</h1>
+
+<div class="controls">
+  <input id="audioFile" type="file" accept="audio/*">
+  <input id="bgFile" type="file" accept="image/*">
+
+  <select id="mode">
+    <option value="bars">Bars (log)</option>
+    <option value="wave">Waveform</option>
+    <option value="radial">Radial</option>
+    <option value="spectrogram">Spectrogram</option>
+  </select>
+
+  <button id="play">Play</button>
+  <button id="record">Record</button>
+  <button id="stop">Stop</button>
+</div>
+
+<canvas id="canvas" width="1280" height="720"></canvas>
+
+<a id="download" hidden>Download video</a>
+
+<script src="main.js"></script>
+</body>
+</html>
