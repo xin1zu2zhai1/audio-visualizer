@@ -1,34 +1,138 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <title>Audio Analyzer & Spectrogram</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Audio Spectrum Analyzer & Recorder</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <header class="header">
+    <div class="title">
+      <h1>Audio Spectrum Analyzer & Recorder</h1>
+      <p class="subtitle">棒グラフ / 波形 / 円形（切替可） + 背景画像 + MP4書き出し</p>
+    </div>
+    <div class="status" id="statusText">未初期化</div>
+  </header>
 
-<h1>Audio Analyzer (Analysis-oriented)</h1>
+  <main class="layout">
+    <section class="panel">
+      <h2>入力</h2>
 
-<div class="controls">
-  <input id="audioFile" type="file" accept="audio/*">
-  <input id="bgFile" type="file" accept="image/*">
+      <div class="field">
+        <label class="label" for="audioFile">音楽ファイル（Audio）</label>
+        <input id="audioFile" type="file" accept="audio/*" />
+        <div class="hint" id="audioHint">未選択</div>
+      </div>
 
-  <select id="mode">
-    <option value="bars">Bars (log)</option>
-    <option value="wave">Waveform</option>
-    <option value="radial">Radial</option>
-    <option value="spectrogram">Spectrogram</option>
-  </select>
+      <div class="field">
+        <label class="label" for="bgFile">背景画像（Background Image）</label>
+        <input id="bgFile" type="file" accept="image/*" />
+        <div class="hint" id="bgHint">未選択（単色背景）</div>
+      </div>
 
-  <button id="play">Play</button>
-  <button id="record">Record</button>
-  <button id="stop">Stop</button>
-</div>
+      <h2>表示</h2>
 
-<canvas id="canvas" width="1280" height="720"></canvas>
+      <div class="row">
+        <div class="field grow">
+          <label class="label" for="graphType">グラフ種類</label>
+          <select id="graphType">
+            <option value="bars">棒グラフ（Spectrum Bars）</option>
+            <option value="wave">波形（Waveform）</option>
+            <option value="circle">円形（Circular Spectrum）</option>
+          </select>
+        </div>
 
-<a id="download" hidden>Download video</a>
+        <div class="field">
+          <label class="label" for="graphColor">グラフ色</label>
+          <input id="graphColor" type="color" value="#00ffcc" />
+        </div>
+      </div>
 
-<script src="main.js"></script>
+      <div class="row">
+        <div class="field grow">
+          <label class="label" for="blend">背景の暗さ（Overlay）</label>
+          <input id="blend" type="range" min="0" max="0.85" step="0.01" value="0.35" />
+          <div class="hint"><span id="blendVal">0.35</span>（大きいほど暗くしてグラフを見やすく）</div>
+        </div>
+      </div>
+
+      <h2>解析設定（Anaylzer）</h2>
+      <div class="grid2">
+        <div class="field">
+          <label class="label" for="fftSize">FFT Size</label>
+          <select id="fftSize">
+            <option>512</option>
+            <option>1024</option>
+            <option selected>2048</option>
+            <option>4096</option>
+            <option>8192</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="label" for="smoothing">Smoothing</label>
+          <input id="smoothing" type="range" min="0" max="0.98" step="0.01" value="0.78" />
+          <div class="hint"><span id="smoothingVal">0.78</span></div>
+        </div>
+
+        <div class="field">
+          <label class="label" for="minDb">Min dB</label>
+          <input id="minDb" type="number" step="1" value="-90" />
+        </div>
+        <div class="field">
+          <label class="label" for="maxDb">Max dB</label>
+          <input id="maxDb" type="number" step="1" value="-10" />
+        </div>
+      </div>
+
+      <h2>再生 / 録画</h2>
+
+      <div class="controls">
+        <button id="btnInit" class="btn">初期化（音声解析を有効化）</button>
+        <button id="btnPlay" class="btn primary" aria-pressed="false">▶ Play</button>
+        <button id="btnRecord" class="btn danger" aria-pressed="false">● Record</button>
+        <button id="btnStop" class="btn" disabled>■ Stop</button>
+      </div>
+
+      <div class="recStatus">
+        <div class="recLine">
+          <span class="dot" id="recDot"></span>
+          <span id="recText">録画：停止中</span>
+        </div>
+        <div class="progressWrap">
+          <div class="progressBar" id="recProg"></div>
+        </div>
+        <div class="hint" id="recHint">※録画中もグラフ種類は切り替え可能</div>
+      </div>
+
+      <h2>出力</h2>
+      <div class="field">
+        <label class="label">ダウンロード</label>
+        <button id="btnDownload" class="btn" disabled>⬇ MP4をダウンロード</button>
+        <div class="hint" id="dlHint">録画後に有効化されます（WebM→MP4変換中は待機）</div>
+      </div>
+
+      <details class="debug">
+        <summary>デバッグ情報</summary>
+        <pre id="debugText"></pre>
+      </details>
+    </section>
+
+    <section class="stage">
+      <div class="canvasWrap">
+        <canvas id="canvas" width="1280" height="720"></canvas>
+      </div>
+
+      <div class="mini">
+        <audio id="audio" controls></audio>
+        <div class="miniHint">
+          1280×720 / 60fps を基準に録画。必要なら app.js の CANVAS_W/H を変更。
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ffmpeg.wasm (WebM -> MP4 変換) -->
+  <script type="module" src="app.js"></script>
 </body>
 </html>
